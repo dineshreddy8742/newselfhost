@@ -1,0 +1,63 @@
+name: dailsmart
+
+services:
+  api:
+    image: dograhai/dograh-api:latest
+    container_name: dailsmart-api
+    restart: unless-stopped
+    volumes:
+      - shared-tmp:/tmp
+      - ./api:/app/api
+      - ./scripts/start_services_docker.sh:/app/scripts/start_services_docker.sh
+      - ./config/asterisk/pjsip.d:/etc/asterisk/pjsip.d
+    environment:
+      ENVIRONMENT: "local"
+      LOG_LEVEL: "INFO"
+      ASTERISK_CONFIG_DIR: "/etc/asterisk"
+      ASTERISK_ARI_PROXY_URL: "http://asterisk-ari-proxy:8088"
+      BACKEND_API_ENDPOINT: "http://localhost:8000"
+      DATABASE_URL: "postgresql+asyncpg://postgres:7cbc12e9a0e9db11a6105626e929ec660b7c54f2988ee9fb77fae88b13632e76@dograh-postgres-1:5432/postgres"
+      REDIS_URL: "redis://:0b9704ecbf8245a58b9cae7be2529861f0c7c5364bf28945c8c1bdce0c99e77b@dograh-redis-1:6379"
+      ENABLE_AWS_S3: "false"
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      MINIO_BUCKET: "voice-audio"
+      MINIO_SECURE: "false"
+      FASTAPI_WORKERS: "1"
+      FORWARDED_ALLOW_IPS: "*"
+      OSS_JWT_SECRET: "strong-secret-key-for-local-testing-jwt-12345678"
+      GOOGLE_CLIENT_ID: "96580183651-359nc1rl937m5is6ksh8ba3v8msn7rka.apps.googleusercontent.com"
+      ENABLE_TELEMETRY: "false"
+    ports:
+      - "8000:8000"
+    networks:
+      - dograh-net
+
+  ui:
+    image: dailsmart-ui:latest
+    container_name: dailsmart-ui
+    restart: unless-stopped
+    environment:
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      BACKEND_URL: "http://api:8000"
+      NEXT_PUBLIC_BACKEND_URL: "http://localhost:8000"
+      NODE_ENV: "oss"
+      ENABLE_TELEMETRY: "false"
+    ports:
+      - "3000:3010"
+    depends_on:
+      - api
+    networks:
+      - dograh-net
+
+volumes:
+  shared-tmp:
+    driver: local
+
+networks:
+  dograh-net:
+    name: dograh_app-network
+    external: true
